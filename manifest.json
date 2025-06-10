@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Timer on Admin Page",
+  "version": "1.0",
+  "description": "يعرض تايمر عند فتح صفحة إدارة محددة",
+  "content_scripts": [
+    {
+      "matches": ["https://admin.elghazawy.com/admin/item2*"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "icons": {
+    "48": "icon.png"
+  }
+}
