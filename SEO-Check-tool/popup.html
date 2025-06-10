@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html dir="rtl">
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            width: 300px;
+            min-height: 200px;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: right;
+        }
+
+        h1 {
+            margin: 0 0 20px 0;
+            font-size: 20px;
+            text-align: center;
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .active {
+            color: #4ade80;
+        }
+
+        .inactive {
+            color: #fbbf24;
+        }
+
+        button {
+            width: 100%;
+            background: linear-gradient(45deg, #10b981, #059669);
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px 0;
+        }
+
+        button:hover {
+            background: linear-gradient(45deg, #059669, #047857);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .info {
+            font-size: 12px;
+            color: #e5e7eb;
+            text-align: center;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>📊 SEO Checker</h1>
+
+    <div class="status">
+        <div id="status-text">جاري فحص الحالة...</div>
+    </div>
+
+    <button id="analyze-btn">تحليل الصفحة الحالية</button>
+    <button id="settings-btn">الإعدادات</button>
+
+    <div class="info">
+        يعمل فقط على صفحات:<br>
+        admin.elghazawy.com/admin/item2/*/edit
+    </div>
+
+    <script>
+        // فحص إذا كانت الصفحة الحالية متوافقة
+        chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+            const currentUrl = tabs[0].url;
+            const statusText = document.getElementById('status-text');
+
+            if (currentUrl.match(/admin\.elghazawy\.com\/admin\/item2\/.*\/edit/)) {
+                statusText.innerHTML = '<span class="active">✅ الصفحة متوافقة</span>';
+                document.getElementById('analyze-btn').disabled = false;
+            } else {
+                statusText.innerHTML = '<span class="inactive">⚠️ الصفحة غير متوافقة</span>';
+                document.getElementById('analyze-btn').disabled = true;
+            }
+        });
+
+        // تشغيل التحليل
+        document.getElementById('analyze-btn').addEventListener('click', function () {
+            chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+                chrome.scripting.executeScript({
+                    target: { tabId: tabs[0].id },
+                    function: triggerAnalysis
+                });
+                window.close();
+            });
+        });
+
+        function triggerAnalysis() {
+            const panel = document.getElementById('seo-checker-panel');
+            if (panel) {
+                const refreshBtn = document.getElementById('refresh-seo');
+                if (refreshBtn) {
+                    refreshBtn.click();
+                }
+            } else {
+                // إعادة تحميل الصفحة لتفعيل content script
+                location.reload();
+            }
+        }
+
+        document.getElementById('settings-btn').addEventListener('click', function () {
+            alert('الإعدادات ستكون متاحة في النسخة القادمة');
+        });
+    </script>
+</body>
+
+</html>
