@@ -219,19 +219,28 @@
     ]),
     DOM_SELECTORS: {
       category: ".select2-selection__choice",
-      formContainer: ".item-form-group-body",
+      formContainer: ".form-body",
       titleInput: "input[name='name_ar']",
       descriptionEditor: 'div[class="note-editable panel-body"]',
       mainImageInput: "input[name='main_image']",
       otherImagesInput: "input[name='images[]']",
       productImages: ".image-item img",
       formBody: ".form-body>div>div",
+      itemGroupBody: ".item-form-group-body",
+      specificationContainer: "#specificationsDiv",
+      keywordsInput: "[name='keywords']",
+      modal: "[name='model_number']",
     },
     SEO_RULES: {
-      title: { minLength: 30, maxLength: 60 },
-      metaDescription: { minLength: 120, maxLength: 160 },
+      title: { minLength: 30, maxLength: 200 },
+      metaDescription: { minLength: 120, maxLength: null },
       content: { minWords: 300, maxWords: 2000 },
-      images: { maxSizeKB: 100, minWidth: 300, minHeight: 300 },
+      images: {
+        maxSizeKB: 100,
+        minWidth: 450,
+        minHeight: 450,
+        formats: ["webp"],
+      },
     },
   };
 
@@ -434,7 +443,7 @@
   }
 `;
 
-  // Utility Functions
+  // Utility Object
   const Utils = {
     injectStyles() {
       if (document.getElementById("seo-checker-styles")) return;
@@ -465,28 +474,52 @@
     },
   };
 
-  // Category Validator
+  // Category Validator Class
   class CategoryValidator {
     static validate() {
       const categoryElement = Utils.getElement(CONFIG.DOM_SELECTORS.category);
+
       if (!categoryElement) {
-        return { valid: false, message: "لم يتم اختيار فئة" };
+        return { valid: false, message: "No category selected" };
       }
 
       const category = Utils.normalizeText(
         categoryElement.getAttribute("title")?.split("|")[0]
       );
+
       const isValid = !CONFIG.INVALID_CATEGORIES.has(category);
 
       return {
         valid: isValid,
-        message: `الفئة "${category}" ${
-          isValid ? "صالحة" : "غير صالحة"
-        } لتحليل SEO.`,
+        message: `Category "${category}" ${
+          isValid ? "is valid" : "is invalid"
+        } for SEO analysis.`,
       };
     }
   }
 
+  // brand Validator Class
+  class BrandValidator {
+    static validate() {
+      const brandElement = Utils.getElement(
+        `${CONFIG.DOM_SELECTORS.itemGroupBody}>div>div:nth-child(2)>div>span>span>span>span`
+      );
+
+      if (!brandElement) {
+        return { valid: false, message: "No brand selected" };
+      }
+      const brand = Utils.normalizeText(brandElement.getAttribute("title"));
+
+      const isValid = brand && brand !== "Brand";
+      console.log(isValid);
+      return {
+        valid: isValid,
+        message: `Brand "${brand}" ${
+          isValid ? "is valid" : "is invalid"
+        } for SEO analysis.`,
+      };
+    }
+  }
   // SEO Analyzer
   class SEOAnalyzer {
     static analyze() {
@@ -499,6 +532,12 @@
           links: this.analyzeLinks(),
           content: this.analyzeContent(),
           performance: this.analyzePerformance(),
+          brand: BrandValidator.validate(),
+          category: CategoryValidator.validate(),
+          specification: ProductSpecification.init(),
+          keywords: ProductKeywords.init(),
+          modal: this.analyzeModel(),
+          // issues: ImageAnalyzer.init().issues,
           ...this.checkInputCompletion(),
         };
       } catch (error) {
@@ -506,7 +545,16 @@
         return { error: "فشل في إجراء تحليل SEO" };
       }
     }
+    static analyzeModel() {
+      const modalValue = Utils.getElement(
+        `${CONFIG.DOM_SELECTORS.modal}`
+      ).value.trim();
+      console.log(modalValue);
 
+      return modalValue
+        ? { valid: true, message: "Model inserted" }
+        : { valid: false, message: "No model inserted" };
+    }
     static analyzeTitle() {
       const titleElement = Utils.getElement(CONFIG.DOM_SELECTORS.titleInput);
       const title = Utils.normalizeText(titleElement?.value);
@@ -674,9 +722,9 @@
         if (!input.value.trim()) {
           allFilled = false;
           noneCompleted.push(input);
-          input.classList.add("error");
+          // input.classList.add("error");
         } else {
-          input.classList.remove("error");
+          // input.classList.remove("error");
         }
       });
 
@@ -686,6 +734,7 @@
 
   // Image Analyzer
   class ImageAnalyzer {
+    static issues = [];
     static init() {
       const mainImageInput = Utils.getElement(
         CONFIG.DOM_SELECTORS.mainImageInput
@@ -706,6 +755,9 @@
           Utils.debounce(this.handleBatchImageUpload.bind(this), 200)
         );
       }
+      return {
+        issues: this.issues || [],
+      };
     }
 
     static handleImageUpload(event) {
@@ -729,24 +781,90 @@
           const format = file.type.split("/")[1];
           const issues = [];
           if (sizeKB > CONFIG.SEO_RULES.images.maxSizeKB)
-            issues.push(`حجم الصورة كبير (${sizeKB.toFixed(2)}KB)`);
+            issues.push(`image size is too large (${sizeKB.toFixed(2)}KB)`);
           if (
             img.width < CONFIG.SEO_RULES.images.minWidth ||
             img.height < CONFIG.SEO_RULES.images.minHeight
           )
-            issues.push(`أبعاد الصورة صغيرة (${img.width}x${img.height})`);
-
+            issues.push(
+              `image dimensions are too small (${img.width}x${img.height})`
+            );
+          if (format && !CONFIG.SEO_RULES.images.formats.includes(format))
+            issues.push(`image format is not supported (${format})`);
           console.log(
             `Image: ${file.name}, Size: ${sizeKB.toFixed(2)}KB, Dimensions: ${
               img.width
             }x${img.height}, Format: ${format}, Issues: ${issues.join(", ")}`
           );
+          console.log(issues);
+          this.issues = issues;
+        };
+        img.onerror = () => {
+          console.error(`Error loading image: ${file.name}`);
         };
       };
       reader.readAsDataURL(file);
     }
   }
 
+  // product specification
+  class ProductSpecification {
+    static init() {
+      const specificationContainer = Utils.getElement(
+        CONFIG.DOM_SELECTORS.specificationContainer
+      );
+      console.log(specificationContainer);
+
+      const innerInputs = specificationContainer.querySelectorAll(
+        ".select2-selection--single .select2-selection__rendered"
+      );
+      console.log("spec inputs", innerInputs);
+      const dataFull = Array.from(innerInputs).map(
+        (input) => input.getAttribute("title") != null || false
+      );
+      if (dataFull.length > 0) {
+        console.log("spec data", dataFull);
+        const isValid = dataFull.every((item) => item);
+        console.log("spec valid", isValid);
+
+        return isValid
+          ? {
+              valid: true,
+              message: "All specifications are filled",
+            }
+          : {
+              valid: false,
+              message: "please fill all specifications",
+            };
+      } else {
+        return {
+          valid: true,
+          message: "No specifications found",
+        };
+      }
+    }
+  }
+  // product keywords
+  class ProductKeywords {
+    static init() {
+      const keywordsInput = Utils.getElement(
+        CONFIG.DOM_SELECTORS.keywordsInput
+      );
+      console.log(keywordsInput);
+      if (!keywordsInput)
+        return { valid: false, message: "No keywords input found" };
+
+      const keywords = Utils.normalizeText(keywordsInput.value);
+      const isValid = keywords.length > 0;
+
+      return {
+        valid: isValid,
+        message: isValid
+          ? "Product Keywords are filled"
+          : "Please enter product keywords",
+      };
+    }
+  }
   // SEO Panel
   class SEOPanel {
     static init() {
@@ -754,8 +872,14 @@
       this.bindEvents();
       this.runAnalysis();
       this.loadTheme();
+      this.disabledSubmitButton();
     }
-
+    static disabledSubmitButton() {
+      const submitButton = Utils.getElement(
+        ".form-actions > button[type='submit']"
+      );
+      submitButton.disabled = true; // Disable submit button initially
+    }
     static createPanel() {
       if (Utils.getElement("#seo-checker-panel")) return;
 
@@ -765,13 +889,13 @@
       <div class="seo-header">
         <h3>📊 SEO Checker</h3>
         <div>
-          <button id="theme-toggle" class="theme-toggle" title="تبديل الوضع">🌙</button>
+          <button id="theme-toggle" class="theme-toggle" title="Toggle Theme">🌙</button>
           <button id="seo-toggle" class="toggle-btn">−</button>
         </div>
       </div>
       <div class="seo-content">
         <div id="seo-results"></div>
-        <button id="refresh-seo" class="refresh-btn">🔄 تحديث التحليل</button>
+        <button id="refresh-seo" class="refresh-btn">🔄 Refresh Analysis</button>
       </div>
     `;
       document.body.appendChild(panel);
@@ -827,11 +951,18 @@
 
     static runAnalysis() {
       const { valid, message } = CategoryValidator.validate();
-      if (!valid) {
-        alert(message);
-        return;
-      }
+      const { valid: brandValid, message: brandMessage } =
+        BrandValidator.validate();
+      // if (!brandValid) {
+      //   // alert(brandMessage);
+      // }
+      // if (!valid) {
+      //   // alert(message);
+      // }
+      const validProductSpecs = ProductSpecification.init();
+
       const results = SEOAnalyzer.analyze();
+      console.log("SEO Analysis Results:", results);
       this.displayResults(results);
     }
 
@@ -840,43 +971,44 @@
       if (!container) return;
 
       container.innerHTML = `
-      ${this.generateSection("title", results.title, "📝 العنوان", {
+      ${this.generateSection("title", results.title, "📝 Title", {
         status: (r) => (r.optimal ? "✅" : "⚠️"),
-        main: (r) => `الطول: ${r.length} حرف`,
+        main: (r) => `Length: ${r.length} characters`,
         detail: (r) => (r.text ? `"${r.text}"` : ""),
         issues: (r) => r.issues.join(", "),
       })}
       ${this.generateSection(
         "meta",
         results.meta.description,
-        "🏷️ الوصف التعريفي",
+        "🏷️ Meta description ",
         {
           status: (r) => (r.exists ? (r.optimal ? "✅" : "⚠️") : "❌"),
-          main: (r) => `الطول: ${r.length} حرف`,
-          detail: (r) => (r.text ? `"${r.text}"` : ""),
+          main: (r) => `Length: ${r.length} characters`,
+          // detail: (r) => (r.text ? `"${r.text}"` : ""),
+          detail: (r) => (r.text ? `` : ""),
         }
       )}
-      ${this.generateSection("headings", results.headings, "📋 العناوين", {
-        status: (r) => (r.optimal ? "✅" : "⚠️"),
-        main: (r) => `H1: ${r.h1Count}, H2: ${r.h2Count}, H3: ${r.h3Count}`,
-        detail: (r) => (r.h1Text ? `H1: "${r.h1Text}"` : ""),
+      ${this.generateSection("keywords", results.keywords, "🔑 Keywords", {
+        status: (r) => (r.valid ? "✅" : "❌"),
+        main: (r) => `${r.message || "None"}`,
+        detail: () => "",
       })}
-      ${this.generateSection("images", results.images, "🖼️ الصور", {
-        status: (r) => (r.altOptimal ? "✅" : "⚠️"),
-        main: (r) => `المجموع: ${r.total}, بدون Alt: ${r.withoutAlt}`,
-      })}
-      ${this.generateSection("links", results.links, "🔗 الروابط", {
-        status: () => "ℹ️",
-        main: (r) => `داخلية: ${r.internal}, خارجية: ${r.external}`,
-      })}
-      ${this.generateSection("content", results.content, "📊 المحتوى", {
-        status: (r) => (r.readabilityOptimal ? "✅" : "⚠️"),
-        main: (r) => `الكلمات: ${r.wordCount}`,
-      })}
-      ${this.generateSection("performance", results.performance, "⚡ الأداء", {
-        status: () => "ℹ️",
-        main: (r) => `Scripts: ${r.scriptCount}, CSS: ${r.stylesheetCount}`,
-      })}
+      ${this.generateSection(
+        "Specifications",
+        results.specification,
+        "📋 Specifications",
+        {
+          status: (r) => (r.valid ? "✅" : "⚠️"),
+          main: (r) =>
+            `${
+              r.valid
+                ? "All specifications filled"
+                : "Incomplete specifications"
+            }`,
+          detail: (r) => (r.h1Text ? `message: ${r.message}` : ""),
+        }
+      )}
+      
     `;
     }
 
@@ -914,8 +1046,9 @@
 
       const observer = new MutationObserver(
         Utils.debounce(() => {
-          const { valid, message } = CategoryValidator.validate();
-          if (!valid) alert(message);
+          // Re-run analysis when DOM changes
+          console.log("DOM changed, re-running analysis...");
+          SEOPanel.runAnalysis();
         }, 200)
       );
 
@@ -938,7 +1071,7 @@
       SEOPanel.init();
     } catch (error) {
       console.error("Initialization Error:", error);
-      alert("فشل في تهيئة ملحق SEO Analyzer");
+      alert("Error initializing SEO Checker: " + error.message);
     }
   };
 

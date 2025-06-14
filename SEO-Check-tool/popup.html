@@ -70,33 +70,32 @@
     <h1>📊 SEO Checker</h1>
 
     <div class="status">
-        <div id="status-text">جاري فحص الحالة...</div>
+        <div id="status-text">Checking status...</div>
     </div>
 
-    <button id="analyze-btn">تحليل الصفحة الحالية</button>
-    <button id="settings-btn">الإعدادات</button>
+    <button id="analyze-btn">Analyzing the current page</button>
+    <button id="settings-btn">Settings</button>
 
     <div class="info">
-        يعمل فقط على صفحات:<br>
+        Works only on pages:<br>
         admin.elghazawy.com/admin/item2/*/edit
     </div>
-
     <script>
-        // فحص إذا كانت الصفحة الحالية متوافقة
+        // Check if the current page is compatible
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
             const currentUrl = tabs[0].url;
             const statusText = document.getElementById('status-text');
 
             if (currentUrl.match(/admin\.elghazawy\.com\/admin\/item2\/.*\/edit/)) {
-                statusText.innerHTML = '<span class="active">✅ الصفحة متوافقة</span>';
+                statusText.innerHTML = '<span class="active">✅Page is compatible</span>';
                 document.getElementById('analyze-btn').disabled = false;
             } else {
-                statusText.innerHTML = '<span class="inactive">⚠️ الصفحة غير متوافقة</span>';
+                statusText.innerHTML = '<span class="inactive">⚠️ Page is not compatible</span>';
                 document.getElementById('analyze-btn').disabled = true;
             }
         });
 
-        // تشغيل التحليل
+        // run
         document.getElementById('analyze-btn').addEventListener('click', function () {
             chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
                 chrome.scripting.executeScript({
@@ -115,13 +114,12 @@
                     refreshBtn.click();
                 }
             } else {
-                // إعادة تحميل الصفحة لتفعيل content script
                 location.reload();
             }
         }
 
         document.getElementById('settings-btn').addEventListener('click', function () {
-            alert('الإعدادات ستكون متاحة في النسخة القادمة');
+            alert('Settings are not implemented yet.');
         });
     </script>
 </body>

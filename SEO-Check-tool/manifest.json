@@ -1,23 +1,28 @@
 {
   "manifest_version": 3,
-  "name": "SEO Checker for Elghazawy Admin",
-  "version": "1.0",
-  "description": "تحقق من SEO للصفحات في admin.elghazawy.com",
-  "permissions": ["activeTab", "scripting"],
-  "host_permissions": ["https://admin.elghazawy.com/*"],
+  "name": "SEO Check Tool",
+  "version": "1.0.0",
+  "description": "A tool to analyze and improve SEO for your content",
+  "permissions": ["storage", "activeTab"],
+  "action": {
+    "default_title": "SEO Check Tool"
+  },
+
   "content_scripts": [
     {
-      "matches": ["https://admin.elghazawy.com/admin/item2/*/edit*"],
+      "matches": [
+        "https://admin.elghazawy.com/admin/item2/*/edit",
+        "http://admin.elghazawy.com/admin/item2/*/edit"
+      ],
+
       "js": ["content.js"],
       "css": ["styles.css"]
     }
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "SEO Checker"
-  },
-  "icons": {}
+  "web_accessible_resources": [
+    {
+      "resources": ["/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
