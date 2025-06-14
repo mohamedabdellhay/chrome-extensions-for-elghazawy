@@ -441,7 +441,7 @@
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
   }
-`;
+  `;
 
   // Utility Object
   const Utils = {
@@ -493,7 +493,7 @@
         valid: isValid,
         message: `Category "${category}" ${
           isValid ? "is valid" : "is invalid"
-        } for SEO analysis.`,
+        }`,
       };
     }
   }
@@ -514,9 +514,7 @@
       console.log(isValid);
       return {
         valid: isValid,
-        message: `Brand "${brand}" ${
-          isValid ? "is valid" : "is invalid"
-        } for SEO analysis.`,
+        message: `Brand "${brand}" ${isValid ? "is valid" : "is invalid"}`,
       };
     }
   }
@@ -542,9 +540,10 @@
         };
       } catch (error) {
         console.error("SEO Analysis Error:", error);
-        return { error: "فشل في إجراء تحليل SEO" };
+        return { error: "Failed to perform SEO analysis" };
       }
     }
+
     static analyzeModel() {
       const modalValue = Utils.getElement(
         `${CONFIG.DOM_SELECTORS.modal}`
@@ -555,17 +554,18 @@
         ? { valid: true, message: "Model inserted" }
         : { valid: false, message: "No model inserted" };
     }
+
     static analyzeTitle() {
       const titleElement = Utils.getElement(CONFIG.DOM_SELECTORS.titleInput);
       const title = Utils.normalizeText(titleElement?.value);
       const length = title.length;
       const issues = [];
 
-      if (!title) issues.push("العنوان مفقود");
+      if (!title) issues.push("Title is empty");
       else if (length < CONFIG.SEO_RULES.title.minLength)
-        issues.push("العنوان قصير جداً");
+        issues.push("Title is too short");
       else if (length > CONFIG.SEO_RULES.title.maxLength)
-        issues.push("العنوان طويل جداً");
+        issues.push("Title is too long");
 
       return {
         exists: !!titleElement,
@@ -636,7 +636,6 @@
       const images = Utils.getElements(CONFIG.DOM_SELECTORS.productImages);
       let withoutAlt = 0;
       let withEmptyAlt = 0;
-      let totalSize = 0;
 
       images.forEach((img) => {
         const alt = img.getAttribute("alt") || "";
@@ -813,20 +812,16 @@
       const specificationContainer = Utils.getElement(
         CONFIG.DOM_SELECTORS.specificationContainer
       );
-      console.log(specificationContainer);
 
       const innerInputs = specificationContainer.querySelectorAll(
         ".select2-selection--single .select2-selection__rendered"
       );
-      console.log("spec inputs", innerInputs);
-      const dataFull = Array.from(innerInputs).map(
-        (input) => input.getAttribute("title") != null || false
+      const dataFull = Array.from(innerInputs).map((input) =>
+        this.getSelectedValue(input)
       );
+      console.log(dataFull);
       if (dataFull.length > 0) {
-        console.log("spec data", dataFull);
         const isValid = dataFull.every((item) => item);
-        console.log("spec valid", isValid);
-
         return isValid
           ? {
               valid: true,
@@ -842,6 +837,13 @@
           message: "No specifications found",
         };
       }
+    }
+    static getSelectedValue(container) {
+      if (container.querySelector(".select2-selection__placeholder")) {
+        return false;
+      }
+
+      return true;
     }
   }
   // product keywords
@@ -872,14 +874,16 @@
       this.bindEvents();
       this.runAnalysis();
       this.loadTheme();
-      this.disabledSubmitButton();
+      // this.disabledSubmitButton();
     }
+
     static disabledSubmitButton() {
       const submitButton = Utils.getElement(
         ".form-actions > button[type='submit']"
       );
       submitButton.disabled = true; // Disable submit button initially
     }
+
     static createPanel() {
       if (Utils.getElement("#seo-checker-panel")) return;
 
@@ -971,45 +975,58 @@
       if (!container) return;
 
       container.innerHTML = `
-      ${this.generateSection("title", results.title, "📝 Title", {
-        status: (r) => (r.optimal ? "✅" : "⚠️"),
-        main: (r) => `Length: ${r.length} characters`,
-        detail: (r) => (r.text ? `"${r.text}"` : ""),
-        issues: (r) => r.issues.join(", "),
-      })}
-      ${this.generateSection(
-        "meta",
-        results.meta.description,
-        "🏷️ Meta description ",
-        {
-          status: (r) => (r.exists ? (r.optimal ? "✅" : "⚠️") : "❌"),
+        ${this.generateSection("title", results.title, "📝 Title", {
+          status: (r) => (r.optimal ? "✅" : "⚠️"),
           main: (r) => `Length: ${r.length} characters`,
-          // detail: (r) => (r.text ? `"${r.text}"` : ""),
-          detail: (r) => (r.text ? `` : ""),
-        }
-      )}
-      ${this.generateSection("keywords", results.keywords, "🔑 Keywords", {
-        status: (r) => (r.valid ? "✅" : "❌"),
-        main: (r) => `${r.message || "None"}`,
-        detail: () => "",
-      })}
-      ${this.generateSection(
-        "Specifications",
-        results.specification,
-        "📋 Specifications",
-        {
-          status: (r) => (r.valid ? "✅" : "⚠️"),
-          main: (r) =>
-            `${
-              r.valid
-                ? "All specifications filled"
-                : "Incomplete specifications"
-            }`,
-          detail: (r) => (r.h1Text ? `message: ${r.message}` : ""),
-        }
-      )}
-      
-    `;
+          detail: (r) => "",
+          issues: (r) => r.issues.join(", "),
+        })}
+        ${this.generateSection(
+          "meta",
+          results.meta.description,
+          "🏷️ Meta description",
+          {
+            status: (r) => (r.exists ? (r.optimal ? "✅" : "⚠️") : "❌"),
+            main: (r) => `Length: ${r.length} characters`,
+            detail: (r) => "",
+          }
+        )}
+        ${this.generateSection("keywords", results.keywords, "🔑 Keywords", {
+          status: (r) => (r.valid ? "✅" : "❌"),
+          main: (r) => `${r.message || "None"}`,
+          detail: () => "",
+        })}
+        ${this.generateSection(
+          "Specifications",
+          results.specification,
+          "📋 Specifications",
+          {
+            status: (r) => (r.valid ? "✅" : "⚠️"),
+            main: (r) =>
+              `${
+                r.valid
+                  ? "All specifications filled"
+                  : "Incomplete specifications"
+              }`,
+            detail: (r) => "",
+          }
+        )}
+        <div class="seo-section">
+          <h4>📋 Product Data</h4>
+          <div class="seo-item ${results.modal.valid ? "good" : "warning"}">
+        <span class="status">${results.modal.valid ? "✅" : "⚠️"}</span>
+        <span>Model: ${results.modal.message}</span>
+          </div>
+          <div class="seo-item ${results.brand.valid ? "good" : "warning"}">
+        <span class="status">${results.brand.valid ? "✅" : "⚠️"}</span>
+        <span>${results.brand.message}</span>
+          </div>
+          <div class="seo-item ${results.category.valid ? "good" : "warning"}">
+        <span class="status">${results.category.valid ? "✅" : "⚠️"}</span>
+        <span>${results.category.message}</span>
+          </div>
+        </div>
+      `;
     }
 
     static generateSection(type, data, title, config) {

@@ -5,7 +5,14 @@
   "description": "A tool to analyze and improve SEO for your content",
   "permissions": ["storage", "activeTab"],
   "action": {
+    "default_icon": {
+      "128": "/icons/icon128.png"
+    },
+
     "default_title": "SEO Check Tool"
+  },
+  "icons": {
+    "128": "/icons/icon128.png"
   },
 
   "content_scripts": [
