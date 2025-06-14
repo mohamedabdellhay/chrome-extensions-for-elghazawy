@@ -332,6 +332,7 @@
     align-items: center;
     gap: 8px;
     transition: var(--transition);
+    text-align: left;
   }
 
   .seo-item.good {
@@ -1064,7 +1065,7 @@
       const observer = new MutationObserver(
         Utils.debounce(() => {
           // Re-run analysis when DOM changes
-          // console.log("DOM changed, re-running analysis...");
+          console.log("DOM changed, re-running analysis...");
           SEOPanel.runAnalysis();
         }, 200)
       );
