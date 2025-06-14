@@ -131,6 +131,7 @@
   font-weight: 600;
   transition: all 0.3s ease;
   margin-top: 10px;
+  font-size: 18px;
 }
 
 .refresh-btn:hover {
