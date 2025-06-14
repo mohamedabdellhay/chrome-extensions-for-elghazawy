@@ -899,7 +899,7 @@
       </div>
       <div class="seo-content">
         <div id="seo-results"></div>
-        <button id="refresh-seo" class="refresh-btn">🔄 Refresh Analysis</button>
+        <button id="refresh-seo" class="refresh-btn" style="font-size:18px">🔄 Refresh Analysis</button>
       </div>
     `;
       document.body.appendChild(panel);
