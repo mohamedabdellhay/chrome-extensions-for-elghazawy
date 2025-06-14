@@ -511,7 +511,7 @@
       const brand = Utils.normalizeText(brandElement.getAttribute("title"));
 
       const isValid = brand && brand !== "Brand";
-      console.log(isValid);
+      // console.log(isValid);
       return {
         valid: isValid,
         message: `Brand "${brand}" ${isValid ? "is valid" : "is invalid"}`,
@@ -548,7 +548,7 @@
       const modalValue = Utils.getElement(
         `${CONFIG.DOM_SELECTORS.modal}`
       ).value.trim();
-      console.log(modalValue);
+      // console.log(modalValue);
 
       return modalValue
         ? { valid: true, message: "Model inserted" }
@@ -790,12 +790,12 @@
             );
           if (format && !CONFIG.SEO_RULES.images.formats.includes(format))
             issues.push(`image format is not supported (${format})`);
-          console.log(
-            `Image: ${file.name}, Size: ${sizeKB.toFixed(2)}KB, Dimensions: ${
-              img.width
-            }x${img.height}, Format: ${format}, Issues: ${issues.join(", ")}`
-          );
-          console.log(issues);
+          // console.log(
+          //   `Image: ${file.name}, Size: ${sizeKB.toFixed(2)}KB, Dimensions: ${
+          //     img.width
+          //   }x${img.height}, Format: ${format}, Issues: ${issues.join(", ")}`
+          // );
+          // console.log(issues);
           this.issues = issues;
         };
         img.onerror = () => {
@@ -819,7 +819,7 @@
       const dataFull = Array.from(innerInputs).map((input) =>
         this.getSelectedValue(input)
       );
-      console.log(dataFull);
+      // console.log(dataFull);
       if (dataFull.length > 0) {
         const isValid = dataFull.every((item) => item);
         return isValid
@@ -852,7 +852,7 @@
       const keywordsInput = Utils.getElement(
         CONFIG.DOM_SELECTORS.keywordsInput
       );
-      console.log(keywordsInput);
+      // console.log(keywordsInput);
       if (!keywordsInput)
         return { valid: false, message: "No keywords input found" };
 
@@ -966,7 +966,7 @@
       const validProductSpecs = ProductSpecification.init();
 
       const results = SEOAnalyzer.analyze();
-      console.log("SEO Analysis Results:", results);
+      // console.log("SEO Analysis Results:", results);
       this.displayResults(results);
     }
 
@@ -1064,7 +1064,7 @@
       const observer = new MutationObserver(
         Utils.debounce(() => {
           // Re-run analysis when DOM changes
-          console.log("DOM changed, re-running analysis...");
+          // console.log("DOM changed, re-running analysis...");
           SEOPanel.runAnalysis();
         }, 200)
       );
