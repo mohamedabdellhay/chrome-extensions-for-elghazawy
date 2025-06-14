@@ -594,8 +594,7 @@
           length: descText.length,
           text: descText,
           optimal:
-            descText.length >= CONFIG.SEO_RULES.metaDescription.minLength &&
-            descText.length <= CONFIG.SEO_RULES.metaDescription.maxLength,
+            descText.length >= CONFIG.SEO_RULES.metaDescription.minLength,
         },
         keywords: {
           exists: !!keywords,
@@ -1028,6 +1027,7 @@
           </div>
         </div>
       `;
+      console.log("results", results);
     }
 
     static generateSection(type, data, title, config) {
@@ -1080,11 +1080,33 @@
     }
   }
 
+  // check inputs change
+  class InputsObserver {
+    static init(selector = "input, textarea, select", callback = null) {
+      const elements = document.querySelectorAll(selector);
+
+      elements.forEach((el) => {
+        el.addEventListener("input", (event) => {
+          const value = event.target.value;
+          const name = event.target.name || event.target.id || "unknown";
+
+          if (typeof callback === "function") {
+            callback(name, value, event.target);
+          } else {
+            SEOPanel.runAnalysis();
+            // console.log(`Input changed: [${name}] = ${value}`);
+          }
+        });
+      });
+    }
+  }
+
   // Initialization
   const init = () => {
     try {
       Utils.injectStyles();
       DOMObserver.init();
+      InputsObserver.init();
       ImageAnalyzer.init();
       SEOPanel.init();
     } catch (error) {
