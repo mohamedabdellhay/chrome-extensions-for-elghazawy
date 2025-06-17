@@ -233,7 +233,7 @@
     },
     SEO_RULES: {
       title: { minLength: 30, maxLength: 200 },
-      metaDescription: { minLength: 10, maxLength: null },
+      metaDescription: { minLength: 30, maxLength: null },
       content: { minWords: 300, maxWords: 2000 },
       images: {
         maxSizeKB: 100,
