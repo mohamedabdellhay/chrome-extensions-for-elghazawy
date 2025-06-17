@@ -537,6 +537,7 @@
           keywords: ProductKeywords.init(),
           modal: this.analyzeModel(),
           customImageAnalyzer: { ...ImageAnalyzer.init() },
+          metaDescription: DetailsObserver.init(),
           // issues: ImageAnalyzer.init().issues,
           ...this.checkInputCompletion(),
         };
@@ -998,7 +999,12 @@
         // ) {
         //   return true;
         // }
-        if (data.brand.valid && data.category.valid && data.keywords.valid) {
+        if (
+          data.brand.valid &&
+          data.category.valid &&
+          data.keywords.valid &&
+          data.metaDescription.valid
+        ) {
           return true;
         }
         return false;
@@ -1136,6 +1142,21 @@
     }
   }
 
+  // Details
+
+  class DetailsObserver {
+    static init() {
+      const detailsElement = Utils.getElements(".note-editing-area");
+      const arDetails = detailsElement[1].textContent.trim();
+      const enDetails = detailsElement[0].textContent.trim();
+      const minlength = CONFIG.SEO_RULES.metaDescription.minLength;
+      if (arDetails.length > minlength && enDetails.length > minlength) {
+        return { valid: true };
+      }
+      return { valid: false };
+    }
+  }
+
   // Initialization
   const init = () => {
     try {
@@ -1143,6 +1164,7 @@
       DOMObserver.init();
       InputsObserver.init();
       ImageAnalyzer.init();
+      DetailsObserver.init();
       SEOPanel.init();
     } catch (error) {
       console.error("Initialization Error:", error);
