@@ -1002,8 +1002,8 @@
         if (
           data.brand.valid &&
           data.category.valid &&
-          data.keywords.valid &&
-          data.metaDescription.valid
+          data.keywords.valid
+          // data.metaDescription.valid
         ) {
           return true;
         }
