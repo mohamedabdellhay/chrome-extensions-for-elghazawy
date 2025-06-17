@@ -536,6 +536,7 @@
           specification: ProductSpecification.init(),
           keywords: ProductKeywords.init(),
           modal: this.analyzeModel(),
+          customImageAnalyzer: { ...ImageAnalyzer.init() },
           // issues: ImageAnalyzer.init().issues,
           ...this.checkInputCompletion(),
         };
@@ -733,7 +734,8 @@
 
   // Image Analyzer
   class ImageAnalyzer {
-    static issues = [];
+    static issues = {}; // Make issues a static property
+
     static init() {
       const mainImageInput = Utils.getElement(
         CONFIG.DOM_SELECTORS.mainImageInput
@@ -755,7 +757,7 @@
         );
       }
       return {
-        issues: this.issues || [],
+        issues: this.issues || { valid: true, message: [] },
       };
     }
 
@@ -778,25 +780,47 @@
         img.onload = () => {
           const sizeKB = file.size / 1024;
           const format = file.type.split("/")[1];
-          const issues = [];
-          if (sizeKB > CONFIG.SEO_RULES.images.maxSizeKB)
-            issues.push(`image size is too large (${sizeKB.toFixed(2)}KB)`);
+          let issues = { valid: true, message: [] };
+
+          if (sizeKB > CONFIG.SEO_RULES.images.maxSizeKB) {
+            issues.valid = false;
+            issues.message.push(
+              `image size is too large (${sizeKB.toFixed(2)}KB)`
+            );
+          }
           if (
             img.width < CONFIG.SEO_RULES.images.minWidth ||
             img.height < CONFIG.SEO_RULES.images.minHeight
-          )
-            issues.push(
+          ) {
+            issues.valid = false;
+            issues.message.push(
               `image dimensions are too small (${img.width}x${img.height})`
             );
-          if (format && !CONFIG.SEO_RULES.images.formats.includes(format))
-            issues.push(`image format is not supported (${format})`);
-          // console.log(
-          //   `Image: ${file.name}, Size: ${sizeKB.toFixed(2)}KB, Dimensions: ${
-          //     img.width
-          //   }x${img.height}, Format: ${format}, Issues: ${issues.join(", ")}`
-          // );
-          // console.log(issues);
-          this.issues = issues;
+          }
+          if (format && !CONFIG.SEO_RULES.images.formats.includes(format)) {
+            issues.valid = false;
+            issues.message.push(`image format is not supported (${format})`);
+          }
+
+          // If any rule fails, ensure valid is false and message is an array of strings
+          if (issues.message.length > 0) {
+            issues.valid = false;
+          } else {
+            issues.valid = true;
+            issues.message = [];
+          }
+
+          // Store the issues object in the static issues property, keyed by file name
+          ImageAnalyzer.issues[file.name] = issues;
+
+          console.log(
+            `Image: ${file.name}, Size: ${sizeKB.toFixed(2)}KB, Dimensions: ${
+              img.width
+            }x${img.height}, Format: ${format}, Issues: ${issues.message.join(
+              ", "
+            )}`
+          );
+          console.log(issues);
         };
         img.onerror = () => {
           console.error(`Error loading image: ${file.name}`);
@@ -954,20 +978,31 @@
     }
 
     static runAnalysis() {
-      const { valid, message } = CategoryValidator.validate();
-      const { valid: brandValid, message: brandMessage } =
-        BrandValidator.validate();
-      // if (!brandValid) {
-      //   // alert(brandMessage);
-      // }
-      // if (!valid) {
-      //   // alert(message);
-      // }
-      const validProductSpecs = ProductSpecification.init();
-
       const results = SEOAnalyzer.analyze();
-      // console.log("SEO Analysis Results:", results);
+      // disable button if data is incomplete
+      let btnSubmit = document.querySelector(".form-actions>button");
+      console.log(btnSubmit);
+      btnSubmit.setAttribute("disabled", true);
+
       this.displayResults(results);
+
+      if (btnNotDisabled(results)) {
+        btnSubmit.removeAttribute("disabled");
+      }
+      function btnNotDisabled(data) {
+        // if (
+        //   data.brand.valid &&
+        //   data.category.valid &&
+        //   data.keywords.valid &&
+        //   data.specification.valid
+        // ) {
+        //   return true;
+        // }
+        if (data.brand.valid && data.category.valid && data.keywords.valid) {
+          return true;
+        }
+        return false;
+      }
     }
 
     static displayResults(results) {
