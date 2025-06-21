@@ -523,6 +523,7 @@
   class SEOAnalyzer {
     static analyze() {
       try {
+        const imageAnalyzerResult = ImageAnalyzer.init();
         return {
           title: this.analyzeTitle(),
           meta: this.analyzeMeta(),
@@ -536,9 +537,8 @@
           specification: ProductSpecification.init(),
           keywords: ProductKeywords.init(),
           modal: this.analyzeModel(),
-          customImageAnalyzer: { ...ImageAnalyzer.init() },
+          customImageAnalyzer: imageAnalyzerResult.customImageAnalyzer,
           metaDescription: DetailsObserver.init(),
-          // issues: ImageAnalyzer.init().issues,
           ...this.checkInputCompletion(),
         };
       } catch (error) {
@@ -736,6 +736,7 @@
   // Image Analyzer
   class ImageAnalyzer {
     static issues = {}; // Make issues a static property
+    static allImages = []; // Track all analyzed images
     static title = SEOAnalyzer.analyzeTitle().text.trim();
 
     static init() {
@@ -760,18 +761,121 @@
       }
       return {
         issues: this.issues || { valid: true, message: [] },
+        customImageAnalyzer: this.getCustomImageAnalyzer(),
       };
     }
 
+    static syncWithCurrentFiles() {
+      // Clear current analysis
+      this.clearImageCache();
+
+      // Sync with main image input
+      const mainImageInput = Utils.getElement(
+        CONFIG.DOM_SELECTORS.mainImageInput
+      );
+      if (mainImageInput && mainImageInput.files.length > 0) {
+        Array.from(mainImageInput.files).forEach((file) => {
+          this.analyzeImageFile(file);
+        });
+      }
+
+      // Sync with other images input
+      const otherImagesInput = Utils.getElement(
+        CONFIG.DOM_SELECTORS.otherImagesInput
+      );
+      if (otherImagesInput && otherImagesInput.files.length > 0) {
+        Array.from(otherImagesInput.files).forEach((file) => {
+          this.analyzeImageFile(file);
+        });
+      }
+
+      // Re-run analysis after sync
+      setTimeout(() => {
+        SEOPanel.runAnalysis();
+      }, 200);
+    }
+
+    static getCustomImageAnalyzer() {
+      // If no images uploaded, consider it valid
+      if (this.allImages.length === 0) {
+        console.log("No images uploaded, returning valid: true");
+        return {
+          valid: true,
+          images: [],
+        };
+      }
+
+      // Check if all images are valid
+      const allValid = this.allImages.every((image) => image.valid === true);
+
+      console.log("ImageAnalyzer Debug:", {
+        totalImages: this.allImages.length,
+        allImages: this.allImages,
+        allValid: allValid,
+        validationResults: this.allImages.map((img) => ({
+          name: img.name,
+          valid: img.valid,
+        })),
+      });
+
+      return {
+        valid: allValid,
+        images: this.allImages,
+      };
+    }
+
+    static clearImageCache() {
+      this.issues = {};
+      this.allImages = [];
+    }
+
+    static reRunImageAnalysis() {
+      console.log("Re-running image analysis...");
+      SEOPanel.runAnalysis();
+    }
+
     static handleImageUpload(event) {
-      const file = event.target.files[0];
-      if (file) this.analyzeImageFile(file);
+      const input = event.target;
+      const files = input.files;
+
+      console.log("Main image upload event:", files.length, "files");
+
+      // Clear previous analysis for this input
+      this.clearImageCache();
+
+      // Analyze all current files
+      if (files.length > 0) {
+        Array.from(files).forEach((file) => {
+          this.analyzeImageFile(file);
+        });
+      } else {
+        // No files selected, re-run analysis to show empty state
+        setTimeout(() => {
+          SEOPanel.runAnalysis();
+        }, 100);
+      }
     }
 
     static handleBatchImageUpload(event) {
-      Array.from(event.target.files).forEach((file) =>
-        this.analyzeImageFile(file)
-      );
+      const input = event.target;
+      const files = input.files;
+
+      console.log("Other images upload event:", files.length, "files");
+
+      // Clear previous analysis for this input
+      this.clearImageCache();
+
+      // Analyze all current files
+      if (files.length > 0) {
+        Array.from(files).forEach((file) => {
+          this.analyzeImageFile(file);
+        });
+      } else {
+        // No files selected, re-run analysis to show empty state
+        setTimeout(() => {
+          SEOPanel.runAnalysis();
+        }, 100);
+      }
     }
 
     static analyzeImageFile(file) {
@@ -823,8 +927,36 @@
             issues.message = [];
           }
 
+          // Create image object with all details
+          const imageData = {
+            name: file.name,
+            valid: issues.valid,
+            size: sizeKB,
+            dimensions: { width: img.width, height: img.height },
+            format: format,
+            issues: issues.message,
+          };
+
+          console.log("Created imageData:", imageData);
+          console.log(
+            "issues.valid:",
+            issues.valid,
+            "typeof:",
+            typeof issues.valid
+          );
+
           // Store the issues object in the static issues property, keyed by file name
           ImageAnalyzer.issues[file.name] = issues;
+
+          // Add to allImages array (replace if already exists)
+          const existingIndex = ImageAnalyzer.allImages.findIndex(
+            (img) => img.name === file.name
+          );
+          if (existingIndex !== -1) {
+            ImageAnalyzer.allImages[existingIndex] = imageData;
+          } else {
+            ImageAnalyzer.allImages.push(imageData);
+          }
 
           console.log(
             `Image: ${file.name}, Size: ${sizeKB.toFixed(2)}KB, Dimensions: ${
@@ -833,10 +965,39 @@
               ", "
             )}`
           );
-          console.log(issues);
+          console.log("All Images:", ImageAnalyzer.allImages);
+          console.log("Custom Image Analyzer:", this.getCustomImageAnalyzer());
+
+          // Re-run analysis after image processing is complete
+          setTimeout(() => {
+            SEOPanel.runAnalysis();
+          }, 100);
         };
         img.onerror = () => {
           console.error(`Error loading image: ${file.name}`);
+          // Add failed image to allImages array
+          const failedImageData = {
+            name: file.name,
+            valid: false,
+            size: file.size / 1024,
+            dimensions: { width: 0, height: 0 },
+            format: file.type.split("/")[1],
+            issues: ["Failed to load image"],
+          };
+
+          const existingIndex = ImageAnalyzer.allImages.findIndex(
+            (img) => img.name === file.name
+          );
+          if (existingIndex !== -1) {
+            ImageAnalyzer.allImages[existingIndex] = failedImageData;
+          } else {
+            ImageAnalyzer.allImages.push(failedImageData);
+          }
+
+          // Re-run analysis after failed image processing
+          setTimeout(() => {
+            SEOPanel.runAnalysis();
+          }, 100);
         };
       };
       reader.readAsDataURL(file);
@@ -1009,6 +1170,7 @@
     }
 
     static runAnalysis() {
+      console.log("Running SEO analysis...");
       const results = SEOAnalyzer.analyze();
       // disable button if data is incomplete
       let btnSubmit = document.querySelector(".form-actions>button");
@@ -1032,8 +1194,10 @@
         if (
           data.brand.valid &&
           data.category.valid &&
-          data.keywords.valid
+          data.keywords.valid &&
+          data.customImageAnalyzer.valid &&
           // data.metaDescription.valid
+          data.customImageAnalyzer.valid
         ) {
           return true;
         }
@@ -1080,6 +1244,25 @@
                   : "Incomplete specifications"
               }`,
             detail: (r) => "",
+          }
+        )}
+        ${this.generateSection(
+          "customImageAnalyzer",
+          results.customImageAnalyzer,
+          "🖼️ Image Analysis",
+          {
+            status: (r) => (r.valid ? "✅" : "❌"),
+            main: (r) =>
+              `${r.valid ? "All images are valid" : "Some images have issues"}`,
+            detail: (r) =>
+              r.images.length > 0
+                ? `Total images: ${r.images.length}`
+                : "No images uploaded",
+            issues: (r) =>
+              r.images
+                .filter((img) => !img.valid)
+                .map((img) => `${img.name}: ${img.issues.join(", ")}`)
+                .join("; "),
           }
         )}
         <div class="seo-section">
