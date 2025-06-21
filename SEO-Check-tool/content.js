@@ -798,7 +798,7 @@
     static getCustomImageAnalyzer() {
       // If no images uploaded, consider it valid
       if (this.allImages.length === 0) {
-        console.log("No images uploaded, returning valid: true");
+        // console.log("No images uploaded, returning valid: true");
         return {
           valid: true,
           images: [],
@@ -808,15 +808,15 @@
       // Check if all images are valid
       const allValid = this.allImages.every((image) => image.valid === true);
 
-      console.log("ImageAnalyzer Debug:", {
-        totalImages: this.allImages.length,
-        allImages: this.allImages,
-        allValid: allValid,
-        validationResults: this.allImages.map((img) => ({
-          name: img.name,
-          valid: img.valid,
-        })),
-      });
+      // console.log("ImageAnalyzer Debug:", {
+      //   totalImages: this.allImages.length,
+      //   allImages: this.allImages,
+      //   allValid: allValid,
+      //   validationResults: this.allImages.map((img) => ({
+      //     name: img.name,
+      //     valid: img.valid,
+      //   })),
+      // });
 
       return {
         valid: allValid,
@@ -830,7 +830,7 @@
     }
 
     static reRunImageAnalysis() {
-      console.log("Re-running image analysis...");
+      // console.log("Re-running image analysis...");
       SEOPanel.runAnalysis();
     }
 
@@ -838,7 +838,7 @@
       const input = event.target;
       const files = input.files;
 
-      console.log("Main image upload event:", files.length, "files");
+      // console.log("Main image upload event:", files.length, "files");
 
       // Clear previous analysis for this input
       this.clearImageCache();
@@ -860,7 +860,7 @@
       const input = event.target;
       const files = input.files;
 
-      console.log("Other images upload event:", files.length, "files");
+      // console.log("Other images upload event:", files.length, "files");
 
       // Clear previous analysis for this input
       this.clearImageCache();
@@ -907,11 +907,15 @@
             issues.valid = false;
             issues.message.push(`image format is not supported (${format})`);
           }
+          console.log("Product title:", ImageAnalyzer.title);
+          console.log("Image title:", file.name);
           // Check if the image title matches the product title
           const titleSimilarity = ImageAnalyzer.jaccardSimilarity(
-            img.title,
+            file.name.split(".")[0].replace(/[-_]/g, " "),
             ImageAnalyzer.title
           );
+          console.log("Image title similarity:", titleSimilarity);
+
           if (titleSimilarity < 80) {
             issues.valid = false;
             issues.message.push(
@@ -937,13 +941,13 @@
             issues: issues.message,
           };
 
-          console.log("Created imageData:", imageData);
-          console.log(
-            "issues.valid:",
-            issues.valid,
-            "typeof:",
-            typeof issues.valid
-          );
+          // console.log("Created imageData:", imageData);
+          // console.log(
+          //   "issues.valid:",
+          //   issues.valid,
+          //   "typeof:",
+          //   typeof issues.valid
+          // );
 
           // Store the issues object in the static issues property, keyed by file name
           ImageAnalyzer.issues[file.name] = issues;
@@ -958,15 +962,15 @@
             ImageAnalyzer.allImages.push(imageData);
           }
 
-          console.log(
-            `Image: ${file.name}, Size: ${sizeKB.toFixed(2)}KB, Dimensions: ${
-              img.width
-            }x${img.height}, Format: ${format}, Issues: ${issues.message.join(
-              ", "
-            )}`
-          );
-          console.log("All Images:", ImageAnalyzer.allImages);
-          console.log("Custom Image Analyzer:", this.getCustomImageAnalyzer());
+          // console.log(
+          //   `Image: ${file.name}, Size: ${sizeKB.toFixed(2)}KB, Dimensions: ${
+          //     img.width
+          //   }x${img.height}, Format: ${format}, Issues: ${issues.message.join(
+          //     ", "
+          //   )}`
+          // );
+          // console.log("All Images:", ImageAnalyzer.allImages);
+          // console.log("Custom Image Analyzer:", this.getCustomImageAnalyzer());
 
           // Re-run analysis after image processing is complete
           setTimeout(() => {
@@ -1003,6 +1007,9 @@
       reader.readAsDataURL(file);
     }
     static jaccardSimilarity(str1, str2) {
+      console.log("Calculating Jaccard similarity...");
+      console.log("String 1:", str1);
+      console.log("String 2:", str2);
       const clean = (str) =>
         str
           .replace(/[-،,]/g, " ") // Normalize dashes and commas to spaces
@@ -1254,15 +1261,29 @@
             status: (r) => (r.valid ? "✅" : "❌"),
             main: (r) =>
               `${r.valid ? "All images are valid" : "Some images have issues"}`,
-            detail: (r) =>
-              r.images.length > 0
-                ? `Total images: ${r.images.length}`
-                : "No images uploaded",
-            issues: (r) =>
-              r.images
-                .filter((img) => !img.valid)
-                .map((img) => `${img.name}: ${img.issues.join(", ")}`)
-                .join("; "),
+            detail: (r) => {
+              // Only show images with issues and their issues
+              if (!r.valid && r.images && r.images.length > 0) {
+                const imagesWithIssues = r.images.filter(
+                  (img) => img.issues && img.issues.length > 0
+                );
+                if (imagesWithIssues.length === 0) return "";
+                return `
+          <ul style="padding-left:18px;">
+            ${imagesWithIssues
+              .map(
+                (img) =>
+                  `<li><strong>${img.name}:</strong> ${img.issues.join(
+                    ", "
+                  )}</li>`
+              )
+              .join("")}
+          </ul>
+            `;
+              }
+              return "";
+            },
+            issues: () => "",
           }
         )}
         <div class="seo-section">
