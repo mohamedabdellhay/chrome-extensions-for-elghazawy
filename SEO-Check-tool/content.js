@@ -736,6 +736,7 @@
   // Image Analyzer
   class ImageAnalyzer {
     static issues = {}; // Make issues a static property
+    static title = SEOAnalyzer.analyzeTitle().text.trim();
 
     static init() {
       const mainImageInput = Utils.getElement(
@@ -782,7 +783,7 @@
           const sizeKB = file.size / 1024;
           const format = file.type.split("/")[1];
           let issues = { valid: true, message: [] };
-
+          // Check image properties against SEO rules
           if (sizeKB > CONFIG.SEO_RULES.images.maxSizeKB) {
             issues.valid = false;
             issues.message.push(
@@ -801,6 +802,17 @@
           if (format && !CONFIG.SEO_RULES.images.formats.includes(format)) {
             issues.valid = false;
             issues.message.push(`image format is not supported (${format})`);
+          }
+          // Check if the image title matches the product title
+          const titleSimilarity = ImageAnalyzer.jaccardSimilarity(
+            img.title,
+            ImageAnalyzer.title
+          );
+          if (titleSimilarity < 80) {
+            issues.valid = false;
+            issues.message.push(
+              `image title is not similar to product title (${titleSimilarity}%)`
+            );
           }
 
           // If any rule fails, ensure valid is false and message is an array of strings
@@ -828,6 +840,24 @@
         };
       };
       reader.readAsDataURL(file);
+    }
+    static jaccardSimilarity(str1, str2) {
+      const clean = (str) =>
+        str
+          .replace(/[-،,]/g, " ") // Normalize dashes and commas to spaces
+          .replace(/\s+/g, " ") // Normalize whitespace
+          .trim()
+          .toLowerCase()
+          .split(" ");
+
+      const set1 = new Set(clean(str1));
+      const set2 = new Set(clean(str2));
+
+      const intersection = new Set([...set1].filter((x) => set2.has(x)));
+      const union = new Set([...set1, ...set2]);
+
+      const similarity = (intersection.size / union.size) * 100;
+      return similarity.toFixed(2);
     }
   }
 
