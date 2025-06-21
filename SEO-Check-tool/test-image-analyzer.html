@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Analyzer Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .result {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+
+        .valid {
+            color: green;
+        }
+
+        .invalid {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Image Analyzer Test</h1>
+
+    <div class="test-section">
+        <h2>Upload Images to Test</h2>
+        <input type="file" id="mainImage" accept="image/*" multiple>
+        <input type="file" id="otherImages" accept="image/*" multiple>
+
+        <button onclick="testImageAnalyzer()">Test Image Analyzer</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Logic</h2>
+        <button onclick="testLogic()">Test Custom Image Analyzer Logic</button>
+        <div id="logic-test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Simplified version of the ImageAnalyzer for testing
+        class TestImageAnalyzer {
+            static allImages = [];
+            static issues = {};
+
+            static init() {
+                const mainImageInput = document.getElementById('mainImage');
+                const otherImagesInput = document.getElementById('otherImages');
+
+                if (mainImageInput) {
+                    mainImageInput.addEventListener('change', this.handleImageUpload.bind(this));
+                }
+                if (otherImagesInput) {
+                    otherImagesInput.addEventListener('change', this.handleBatchImageUpload.bind(this));
+                }
+
+                return {
+                    customImageAnalyzer: this.getCustomImageAnalyzer()
+                };
+            }
+
+            static getCustomImageAnalyzer() {
+                // If no images uploaded, consider it valid
+                if (this.allImages.length === 0) {
+                    console.log('No images uploaded, returning valid: true');
+                    return {
+                        valid: true,
+                        images: []
+                    };
+                }
+
+                // Check if all images are valid
+                const allValid = this.allImages.every(image => image.valid === true);
+
+                console.log('ImageAnalyzer Debug:', {
+                    totalImages: this.allImages.length,
+                    allImages: this.allImages,
+                    allValid: allValid,
+                    validationResults: this.allImages.map(img => ({ name: img.name, valid: img.valid }))
+                });
+
+                return {
+                    valid: allValid,
+                    images: this.allImages
+                };
+            }
+
+            static handleImageUpload(event) {
+                const file = event.target.files[0];
+                if (file) this.analyzeImageFile(file);
+            }
+
+            static handleBatchImageUpload(event) {
+                Array.from(event.target.files).forEach(file => this.analyzeImageFile(file));
+            }
+
+            static analyzeImageFile(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const sizeKB = file.size / 1024;
+                        const format = file.type.split('/')[1];
+                        let issues = [];
+
+                        // Test rules (simplified)
+                        if (sizeKB > 100) {
+                            issues.push(`Image size too large (${sizeKB.toFixed(2)}KB)`);
+                        }
+                        if (img.width < 450 || img.height < 450) {
+                            issues.push(`Dimensions too small (${img.width}x${img.height})`);
+                        }
+                        if (format !== 'webp') {
+                            issues.push(`Format not supported (${format})`);
+                        }
+
+                        const imageData = {
+                            name: file.name,
+                            valid: issues.length === 0,
+                            size: sizeKB,
+                            dimensions: { width: img.width, height: img.height },
+                            format: format,
+                            issues: issues
+                        };
+
+                        console.log('Created imageData:', imageData);
+                        console.log('valid:', imageData.valid, 'typeof:', typeof imageData.valid);
+
+                        // Add to allImages array
+                        const existingIndex = this.allImages.findIndex(img => img.name === file.name);
+                        if (existingIndex !== -1) {
+                            this.allImages[existingIndex] = imageData;
+                        } else {
+                            this.allImages.push(imageData);
+                        }
+
+                        console.log('All Images:', this.allImages);
+                        console.log('Custom Image Analyzer:', this.getCustomImageAnalyzer());
+
+                        this.displayResults();
+                    };
+                    img.onerror = () => {
+                        const failedImageData = {
+                            name: file.name,
+                            valid: false,
+                            size: file.size / 1024,
+                            dimensions: { width: 0, height: 0 },
+                            format: file.type.split('/')[1],
+                            issues: ['Failed to load image']
+                        };
+
+                        const existingIndex = this.allImages.findIndex(img => img.name === file.name);
+                        if (existingIndex !== -1) {
+                            this.allImages[existingIndex] = failedImageData;
+                        } else {
+                            this.allImages.push(failedImageData);
+                        }
+
+                        this.displayResults();
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
+
+            static displayResults() {
+                const resultsDiv = document.getElementById('results');
+                const customAnalyzer = this.getCustomImageAnalyzer();
+
+                resultsDiv.innerHTML = `
+                    <div class="result ${customAnalyzer.valid ? 'valid' : 'invalid'}">
+                        <h3>Custom Image Analyzer Result:</h3>
+                        <p><strong>Overall Status:</strong> ${customAnalyzer.valid ? '✅ All images are valid' : '❌ Some images have issues'}</p>
+                        <p><strong>Total Images:</strong> ${customAnalyzer.images.length}</p>
+                        <p><strong>Valid Images:</strong> ${customAnalyzer.images.filter(img => img.valid).length}</p>
+                        <p><strong>Invalid Images:</strong> ${customAnalyzer.images.filter(img => !img.valid).length}</p>
+                    </div>
+                    
+                    <div class="result">
+                        <h3>Individual Image Details:</h3>
+                        ${customAnalyzer.images.map(img => `
+                            <div class="${img.valid ? 'valid' : 'invalid'}">
+                                <strong>${img.name}</strong> - ${img.valid ? '✅ Valid' : '❌ Invalid'}<br>
+                                Size: ${img.size.toFixed(2)}KB, Dimensions: ${img.dimensions.width}x${img.dimensions.height}, Format: ${img.format}
+                                ${img.issues.length > 0 ? `<br>Issues: ${img.issues.join(', ')}` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="result">
+                        <h3>Raw Data:</h3>
+                        <pre>${JSON.stringify(customAnalyzer, null, 2)}</pre>
+                    </div>
+                `;
+            }
+
+            static clearImages() {
+                this.allImages = [];
+                this.issues = {};
+            }
+        }
+
+        function testImageAnalyzer() {
+            const analyzer = TestImageAnalyzer.init();
+            console.log('Initial customImageAnalyzer:', analyzer.customImageAnalyzer);
+        }
+
+        function testLogic() {
+            TestImageAnalyzer.clearImages();
+
+            // Add a valid image
+            TestImageAnalyzer.allImages.push({
+                name: "valid-image.webp",
+                valid: true,
+                size: 50,
+                dimensions: { width: 500, height: 500 },
+                format: "webp",
+                issues: []
+            });
+
+            // Add an invalid image (like your example)
+            TestImageAnalyzer.allImages.push({
+                name: "Screenshot from 2025-06-17 15-17-13.png",
+                valid: false,
+                size: 30.3330078125,
+                dimensions: { width: 537, height: 254 },
+                format: "png",
+                issues: [
+                    "image dimensions are too small (537x254)",
+                    "image format is not supported (png)"
+                ]
+            });
+
+            const result = TestImageAnalyzer.getCustomImageAnalyzer();
+
+            const logicResultsDiv = document.getElementById('logic-test-results');
+            logicResultsDiv.innerHTML = `
+                <div class="result">
+                    <h3>Logic Test Results:</h3>
+                    <p><strong>Expected:</strong> valid: false (because one image is invalid)</p>
+                    <p><strong>Actual:</strong> valid: ${result.valid}</p>
+                    <p><strong>Test:</strong> ${result.valid === false ? '✅ PASSED' : '❌ FAILED'}</p>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                </div>
+            `;
+
+            console.log('Logic test result:', result);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            TestImageAnalyzer.init();
+        });
+    </script>
+</body>
+
+</html>
