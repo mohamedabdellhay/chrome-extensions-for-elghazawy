@@ -1080,7 +1080,20 @@
         return { valid: false, message: "No keywords input found" };
 
       const keywords = Utils.normalizeText(keywordsInput.value);
-      const isValid = keywords.length > 0;
+      const titleData = SEOAnalyzer.analyzeTitle().text.trim().split(" ");
+      // console.log("Product Title:", titleData);
+      const keywordsData = keywords.replace(/,/, " ").split(" ");
+      // console.log("Keywords Data:", keywordsData);
+      let founded = 0;
+
+      titleData.forEach((word) => {
+        if (keywordsData.includes(word)) {
+          founded++;
+        }
+      });
+      console.log("Keywords founded in title:", founded);
+
+      const isValid = keywords.length > 0 && founded > 2;
 
       return {
         valid: isValid,
@@ -1273,9 +1286,9 @@
             ${imagesWithIssues
               .map(
                 (img) =>
-                  `<li><strong>${img.name}:</strong> ${img.issues.join(
-                    ", "
-                  )}</li>`
+                  `<li style="font-size: 14px; text-align: left"><strong>${
+                    img.name
+                  }:</strong> ${img.issues.join(", ")}</li>`
               )
               .join("")}
           </ul>
