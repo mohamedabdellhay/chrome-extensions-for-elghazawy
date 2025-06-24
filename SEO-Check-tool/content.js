@@ -1093,7 +1093,7 @@
       });
       console.log("Keywords founded in title:", founded);
 
-      const isValid = keywords.length > 0 && founded > 2;
+      const isValid = keywords.length > 0 && founded > 0;
 
       return {
         valid: isValid,
@@ -1199,30 +1199,31 @@
 
       this.displayResults(results);
 
-      if (btnNotDisabled(results)) {
+      if (this.btnNotDisabled(results)) {
         btnSubmit.removeAttribute("disabled");
       }
-      function btnNotDisabled(data) {
-        // if (
-        //   data.brand.valid &&
-        //   data.category.valid &&
-        //   data.keywords.valid &&
-        //   data.specification.valid
-        // ) {
-        //   return true;
-        // }
-        if (
-          data.brand.valid &&
-          data.category.valid &&
-          data.keywords.valid &&
-          data.customImageAnalyzer.valid &&
-          // data.metaDescription.valid
-          data.customImageAnalyzer.valid
-        ) {
-          return true;
-        }
-        return false;
+    }
+
+    static btnNotDisabled(data) {
+      const productStatus = Utils.getElement(`.product_info_body`)
+        .textContent.trim()
+        .toLowerCase();
+
+      console.log("Product Status:", productStatus);
+      if (productStatus !== "published") {
+        return true; // Always enable button if product is not published
       }
+      if (
+        data.brand.valid &&
+        data.category.valid &&
+        data.keywords.valid &&
+        data.customImageAnalyzer.valid &&
+        // data.metaDescription.valid
+        data.customImageAnalyzer.valid
+      ) {
+        return true;
+      }
+      return false;
     }
 
     static displayResults(results) {
