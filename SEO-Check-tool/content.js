@@ -1205,14 +1205,14 @@
     }
 
     static btnNotDisabled(data) {
-      const productStatus = Utils.getElement(`.product_info_body`)
-        .textContent.trim()
-        .toLowerCase();
+      // const productStatus = Utils.getElement(`.product_info_body`)
+      //   .textContent.trim()
+      //   .toLowerCase();
 
-      console.log("Product Status:", productStatus);
-      if (productStatus !== "published") {
-        return true; // Always enable button if product is not published
-      }
+      // console.log("Product Status:", productStatus);
+      // if (productStatus !== "published") {
+      //   return true; // Always enable button if product is not published
+      // }
       if (
         data.brand.valid &&
         data.category.valid &&
