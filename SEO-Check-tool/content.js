@@ -256,6 +256,14 @@
     --border-color: #ddd;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     --transition: all 0.3s ease;
+    --image-card-bg: #f8fafd;
+    --image-card-bg-dark: #232e44;
+    --image-card-border: #e0e6ef;
+    --image-card-border-dark: #3a4a6b;
+    --image-card-hover: #e6f0ff;
+    --image-card-hover-dark: #2a3957;
+    --image-invalid-bg: #fff0f0;
+    --image-invalid-bg-dark: #3a2323;
   }
 
   /* Dark mode variables */
@@ -268,6 +276,10 @@
     --background-color: #1e2a44;
     --border-color: #3a4a6b;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --image-card-bg: var(--background-color);
+    --image-card-border: var(--image-card-border-dark);
+    --image-card-hover: var(--image-card-hover-dark);
+    --image-invalid-bg: var(--image-invalid-bg-dark);
   }
 
   #seo-checker-panel {
@@ -442,6 +454,102 @@
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
   }
+
+  .seo-image-viewer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  .seo-image-card {
+    background: var(--image-card-bg);
+    border: 1.5px solid var(--image-card-border);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    padding: 10px 8px 8px 8px;
+    max-width: 120px;
+    min-width: 90px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: box-shadow 0.2s, border 0.2s, background 0.2s;
+    position: relative;
+    cursor: pointer;
+  }
+  .seo-image-card:hover {
+    background: var(--image-card-hover);
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 16px rgba(0,123,255,0.10);
+    z-index: 2;
+  }
+  .seo-image-card.seo-image-valid{
+    background: rgba(40, 167, 69, 0.1);
+    border-color: rgba(40, 167, 69, 0.1);
+  }
+  .seo-image-card.seo-image-invalid {
+    background: var(--image-invalid-bg);
+    border-color: var(--error-color);
+  }
+  .seo-image-thumb-wrap {
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    overflow: hidden;
+    border: 1px solid #e0e6ef;
+  }
+  [data-theme="dark"] .seo-image-thumb-wrap {
+    background: #232e44;
+    border: 1px solid #3a4a6b;
+  }
+  .seo-image-thumb {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 4px;
+    object-fit: contain;
+    background: #fff;
+  }
+  .seo-image-info {
+    width: 100%;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-color);
+    margin-top: 2px;
+  }
+  .seo-image-name {
+    font-weight: 500;
+    font-size: 11px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .seo-image-meta {
+    font-size: 10px;
+    color: #888;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+  .seo-image-issues {
+    color: var(--error-color);
+    font-size: 10px;
+    margin-top: 2px;
+    text-align: left;
+    word-break: break-word;
+    background: rgba(220,53,69,0.07);
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin-bottom: 2px;
+  }
   `;
 
   // Utility Object
@@ -528,7 +636,6 @@
           title: this.analyzeTitle(),
           meta: this.analyzeMeta(),
           headings: this.analyzeHeadings(),
-          images: this.analyzeImages(),
           links: this.analyzeLinks(),
           content: this.analyzeContent(),
           performance: this.analyzePerformance(),
@@ -537,7 +644,7 @@
           specification: ProductSpecification.init(),
           keywords: ProductKeywords.init(),
           modal: this.analyzeModel(),
-          customImageAnalyzer: imageAnalyzerResult.customImageAnalyzer,
+          images: imageAnalyzerResult.customImageAnalyzer,
           metaDescription: DetailsObserver.init(),
           ...this.checkInputCompletion(),
         };
@@ -808,15 +915,6 @@
       // Check if all images are valid
       const allValid = this.allImages.every((image) => image.valid === true);
 
-      // console.log("ImageAnalyzer Debug:", {
-      //   totalImages: this.allImages.length,
-      //   allImages: this.allImages,
-      //   allValid: allValid,
-      //   validationResults: this.allImages.map((img) => ({
-      //     name: img.name,
-      //     valid: img.valid,
-      //   })),
-      // });
 
       return {
         valid: allValid,
@@ -838,15 +936,13 @@
       const input = event.target;
       const files = input.files;
 
-      // console.log("Main image upload event:", files.length, "files");
-
-      // Clear previous analysis for this input
-      this.clearImageCache();
+      // Remove only images from 'main' source
+      ImageAnalyzer.allImages = ImageAnalyzer.allImages.filter(img => img.source !== "main");
 
       // Analyze all current files
       if (files.length > 0) {
         Array.from(files).forEach((file) => {
-          this.analyzeImageFile(file);
+          this.analyzeImageFile(file, "main");
         });
       } else {
         // No files selected, re-run analysis to show empty state
@@ -860,15 +956,13 @@
       const input = event.target;
       const files = input.files;
 
-      // console.log("Other images upload event:", files.length, "files");
-
-      // Clear previous analysis for this input
-      this.clearImageCache();
+      // Remove only images from 'other' source
+      ImageAnalyzer.allImages = ImageAnalyzer.allImages.filter(img => img.source !== "other");
 
       // Analyze all current files
       if (files.length > 0) {
         Array.from(files).forEach((file) => {
-          this.analyzeImageFile(file);
+          this.analyzeImageFile(file, "other");
         });
       } else {
         // No files selected, re-run analysis to show empty state
@@ -878,14 +972,22 @@
       }
     }
 
-    static analyzeImageFile(file) {
+    static analyzeImageFile(file, source = "main") {
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new Image();
         img.src = e.target.result;
         img.onload = () => {
           const sizeKB = file.size / 1024;
-          const format = file.type.split("/")[1];
+          // --- FIX: Get extension from file name, fallback to MIME type ---
+          let format = "";
+          const nameParts = file.name.split(".");
+          if (nameParts.length > 1) {
+            format = nameParts.pop().toLowerCase();
+          } else if (file.type && file.type.includes("/")) {
+            format = file.type.split("/")[1].toLowerCase();
+          }
+          // ---------------------------------------------------------------
           let issues = { valid: true, message: [] };
           // Check image properties against SEO rules
           if (sizeKB > CONFIG.SEO_RULES.images.maxSizeKB) {
@@ -916,7 +1018,7 @@
           );
           console.log("Image title similarity:", titleSimilarity);
 
-          if (titleSimilarity < 80) {
+          if (titleSimilarity < 50) {
             issues.valid = false;
             issues.message.push(
               `image title is not similar to product title (${titleSimilarity}%)`
@@ -939,38 +1041,21 @@
             dimensions: { width: img.width, height: img.height },
             format: format,
             issues: issues.message,
+            source: source, // Track source
           };
-
-          // console.log("Created imageData:", imageData);
-          // console.log(
-          //   "issues.valid:",
-          //   issues.valid,
-          //   "typeof:",
-          //   typeof issues.valid
-          // );
 
           // Store the issues object in the static issues property, keyed by file name
           ImageAnalyzer.issues[file.name] = issues;
 
           // Add to allImages array (replace if already exists)
           const existingIndex = ImageAnalyzer.allImages.findIndex(
-            (img) => img.name === file.name
+            (img) => img.name === file.name && img.source === source
           );
           if (existingIndex !== -1) {
             ImageAnalyzer.allImages[existingIndex] = imageData;
           } else {
             ImageAnalyzer.allImages.push(imageData);
           }
-
-          // console.log(
-          //   `Image: ${file.name}, Size: ${sizeKB.toFixed(2)}KB, Dimensions: ${
-          //     img.width
-          //   }x${img.height}, Format: ${format}, Issues: ${issues.message.join(
-          //     ", "
-          //   )}`
-          // );
-          // console.log("All Images:", ImageAnalyzer.allImages);
-          // console.log("Custom Image Analyzer:", this.getCustomImageAnalyzer());
 
           // Re-run analysis after image processing is complete
           setTimeout(() => {
@@ -979,18 +1064,28 @@
         };
         img.onerror = () => {
           console.error(`Error loading image: ${file.name}`);
+          // --- FIX: Get extension from file name, fallback to MIME type ---
+          let format = "";
+          const nameParts = file.name.split(".");
+          if (nameParts.length > 1) {
+            format = nameParts.pop().toLowerCase();
+          } else if (file.type && file.type.includes("/")) {
+            format = file.type.split("/")[1].toLowerCase();
+          }
+          // ---------------------------------------------------------------
           // Add failed image to allImages array
           const failedImageData = {
             name: file.name,
             valid: false,
             size: file.size / 1024,
             dimensions: { width: 0, height: 0 },
-            format: file.type.split("/")[1],
+            format: format,
             issues: ["Failed to load image"],
+            source: source, // Track source
           };
 
           const existingIndex = ImageAnalyzer.allImages.findIndex(
-            (img) => img.name === file.name
+            (img) => img.name === file.name && img.source === source
           );
           if (existingIndex !== -1) {
             ImageAnalyzer.allImages[existingIndex] = failedImageData;
@@ -1006,6 +1101,7 @@
       };
       reader.readAsDataURL(file);
     }
+
     static jaccardSimilarity(str1, str2) {
       console.log("Calculating Jaccard similarity...");
       console.log("String 1:", str1);
@@ -1021,6 +1117,9 @@
       const set1 = new Set(clean(str1));
       const set2 = new Set(clean(str2));
 
+      // Remove empty strings from sets
+      set1.delete("");
+      set2.delete("");
       const intersection = new Set([...set1].filter((x) => set2.has(x)));
       const union = new Set([...set1, ...set2]);
 
@@ -1217,9 +1316,9 @@
         data.brand.valid &&
         data.category.valid &&
         data.keywords.valid &&
-        data.customImageAnalyzer.valid &&
+        data.images.valid &&
         // data.metaDescription.valid
-        data.customImageAnalyzer.valid
+        data.images.valid
       ) {
         return true;
       }
@@ -1268,34 +1367,62 @@
           }
         )}
         ${this.generateSection(
-          "customImageAnalyzer",
-          results.customImageAnalyzer,
+          "images",
+          results.images,
           "🖼️ Image Analysis",
           {
             status: (r) => (r.valid ? "✅" : "❌"),
             main: (r) =>
               `${r.valid ? "All images are valid" : "Some images have issues"}`,
             detail: (r) => {
-              // Only show images with issues and their issues
-              if (!r.valid && r.images && r.images.length > 0) {
-                const imagesWithIssues = r.images.filter(
-                  (img) => img.issues && img.issues.length > 0
-                );
-                if (imagesWithIssues.length === 0) return "";
-                return `
-          <ul style="padding-left:18px;">
-            ${imagesWithIssues
-              .map(
-                (img) =>
-                  `<li style="font-size: 14px; text-align: left"><strong>${
-                    img.name
-                  }:</strong> ${img.issues.join(", ")}</li>`
-              )
-              .join("")}
-          </ul>
-            `;
+              // Show image previews if any images are uploaded
+              let previewHtml = "";
+              if (r.images && r.images.length > 0) {
+                previewHtml += `<div class="seo-image-viewer">`;
+                r.images.forEach(img => {
+                  if (["webp", "jpeg", "jpg", "png", "gif", "bmp"].includes(img.format)) {
+                    previewHtml += `
+                      <div class="seo-image-card${img.valid ? ' seo-image-valid' : ' seo-image-invalid'}">
+                        <div class="seo-image-thumb-wrap">
+                          <img data-img-name="${img.name}" alt="${img.name}" class="seo-image-thumb" />
+                        </div>
+                        <div class="seo-image-info">
+                          <div class="seo-image-name" title="${img.name}">${img.name}</div>
+                          <div class="seo-image-meta">
+                            <span>${img.size ? img.size.toFixed(1) : '?'} KB</span>
+                            <span>${img.dimensions ? img.dimensions.width + '×' + img.dimensions.height : ''}</span>
+                          </div>
+                          ${img.issues && img.issues.length > 0 ? `<div class="seo-image-issues">${img.issues.map(issue => `<span>${issue}</span>`).join('<br/>')}</div>` : ''}
+                        </div>
+                      </div>
+                    `;
+                  }
+                });
+                previewHtml += `</div>`;
               }
-              return "";
+              // Only show images with issues and their issues
+          //     let issuesHtml = "";
+          //     if (!r.valid && r.images && r.images.length > 0) {
+          //       const imagesWithIssues = r.images.filter(
+          //         (img) => img.issues && img.issues.length > 0
+          //       );
+          //       if (imagesWithIssues.length > 0) {
+          //         issuesHtml = `
+          // <ul style="padding-left:18px;">
+          //   ${imagesWithIssues
+          //     .map(
+          //       (img) =>
+          //         `<li style="font-size: 14px; text-align: left"><strong>${
+          //           img.name
+          //         }:</strong> ${img.issues.join(", ")}</li>`
+          //     )
+          //     .join("")}
+          // </ul>
+          //         `;
+          //       }
+          //     }
+              // return previewHtml + issuesHtml;
+              return previewHtml;
             },
             issues: () => "",
           }
@@ -1316,6 +1443,36 @@
           </div>
         </div>
       `;
+      // After rendering, load image previews from file inputs
+      setTimeout(() => {
+        // Helper to find file by name from inputs
+        function findFileByName(name) {
+          const mainInput = Utils.getElement(
+            CONFIG.DOM_SELECTORS.mainImageInput
+          );
+          const otherInput = Utils.getElement(
+            CONFIG.DOM_SELECTORS.otherImagesInput
+          );
+          let files = [];
+          if (mainInput && mainInput.files) files = files.concat(Array.from(mainInput.files));
+          if (otherInput && otherInput.files) files = files.concat(Array.from(otherInput.files));
+          return files.find(f => f.name === name);
+        }
+        // For each image tag with data-img-name, set src from file
+        document.querySelectorAll('img[data-img-name]').forEach(imgEl => {
+          const name = imgEl.getAttribute('data-img-name');
+          const file = findFileByName(name);
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+              imgEl.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+          } else {
+            imgEl.style.display = 'none';
+          }
+        });
+      }, 0);
       console.log("results", results);
     }
 
