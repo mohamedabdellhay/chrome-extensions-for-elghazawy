@@ -997,7 +997,7 @@
             );
           }
           if (
-            img.width < CONFIG.SEO_RULES.images.minWidth ||
+            img.width < CONFIG.SEO_RULES.images.minWidth &&
             img.height < CONFIG.SEO_RULES.images.minHeight
           ) {
             issues.valid = false;
