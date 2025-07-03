@@ -876,13 +876,16 @@
       // Clear current analysis
       this.clearImageCache();
 
+      // Get current title
+      const title = SEOAnalyzer.analyzeTitle().text.trim();
+
       // Sync with main image input
       const mainImageInput = Utils.getElement(
         CONFIG.DOM_SELECTORS.mainImageInput
       );
       if (mainImageInput && mainImageInput.files.length > 0) {
         Array.from(mainImageInput.files).forEach((file) => {
-          this.analyzeImageFile(file);
+          this.analyzeImageFile(file, "main", title);
         });
       }
 
@@ -892,7 +895,7 @@
       );
       if (otherImagesInput && otherImagesInput.files.length > 0) {
         Array.from(otherImagesInput.files).forEach((file) => {
-          this.analyzeImageFile(file);
+          this.analyzeImageFile(file, "other", title);
         });
       }
 
@@ -905,7 +908,6 @@
     static getCustomImageAnalyzer() {
       // If no images uploaded, consider it valid
       if (this.allImages.length === 0) {
-        // console.log("No images uploaded, returning valid: true");
         return {
           valid: true,
           images: [],
@@ -935,14 +937,16 @@
     static handleImageUpload(event) {
       const input = event.target;
       const files = input.files;
-
+      const title = SEOAnalyzer.analyzeTitle().text.trim();
+          
+      
       // Remove only images from 'main' source
       ImageAnalyzer.allImages = ImageAnalyzer.allImages.filter(img => img.source !== "main");
 
       // Analyze all current files
       if (files.length > 0) {
         Array.from(files).forEach((file) => {
-          this.analyzeImageFile(file, "main");
+          this.analyzeImageFile(file, "main", title);
         });
       } else {
         // No files selected, re-run analysis to show empty state
@@ -955,6 +959,7 @@
     static handleBatchImageUpload(event) {
       const input = event.target;
       const files = input.files;
+      const title = SEOAnalyzer.analyzeTitle().text.trim();
 
       // Remove only images from 'other' source
       ImageAnalyzer.allImages = ImageAnalyzer.allImages.filter(img => img.source !== "other");
@@ -962,7 +967,7 @@
       // Analyze all current files
       if (files.length > 0) {
         Array.from(files).forEach((file) => {
-          this.analyzeImageFile(file, "other");
+          this.analyzeImageFile(file, "other", title);
         });
       } else {
         // No files selected, re-run analysis to show empty state
@@ -972,7 +977,7 @@
       }
     }
 
-    static analyzeImageFile(file, source = "main") {
+    static analyzeImageFile(file, source = "main", title) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new Image();
@@ -1009,14 +1014,14 @@
             issues.valid = false;
             issues.message.push(`image format is not supported (${format})`);
           }
-          console.log("Product title:", ImageAnalyzer.title);
-          console.log("Image title:", file.name);
+          // console.log("Product title:", ImageAnalyzer.title);
+          // console.log("Image title:", file.name);
           // Check if the image title matches the product title
           const titleSimilarity = ImageAnalyzer.jaccardSimilarity(
             file.name.split(".")[0].replace(/[-_]/g, " "),
-            ImageAnalyzer.title
+            title
           );
-          console.log("Image title similarity:", titleSimilarity);
+          // console.log("Image title similarity:", titleSimilarity);
 
           if (titleSimilarity < 50) {
             issues.valid = false;
@@ -1103,16 +1108,26 @@
     }
 
     static jaccardSimilarity(str1, str2) {
-      console.log("Calculating Jaccard similarity...");
-      console.log("String 1:", str1);
-      console.log("String 2:", str2);
-      const clean = (str) =>
-        str
+      // console.log("Calculating Jaccard similarity...");
+      // console.log("String 1:", str1);
+      // console.log("String 2:", str2);
+      
+      // Handle null/undefined values
+      if (!str1 || !str2) {
+        return "0.00";
+      }
+      
+      const clean = (str) => {
+        if (typeof str !== 'string') {
+          return [];
+        }
+        return str
           .replace(/[-،,]/g, " ") // Normalize dashes and commas to spaces
           .replace(/\s+/g, " ") // Normalize whitespace
           .trim()
           .toLowerCase()
           .split(" ");
+      };
 
       const set1 = new Set(clean(str1));
       const set2 = new Set(clean(str2));
@@ -1120,6 +1135,12 @@
       // Remove empty strings from sets
       set1.delete("");
       set2.delete("");
+      
+      // Handle case where both sets are empty
+      if (set1.size === 0 && set2.size === 0) {
+        return "0.00";
+      }
+      
       const intersection = new Set([...set1].filter((x) => set2.has(x)));
       const union = new Set([...set1, ...set2]);
 
@@ -1190,7 +1211,7 @@
           founded++;
         }
       });
-      console.log("Keywords founded in title:", founded);
+      // console.log("Keywords founded in title:", founded);
 
       const isValid = keywords.length > 0 && founded > 0;
 
@@ -1289,11 +1310,12 @@
     }
 
     static runAnalysis() {
-      console.log("Running SEO analysis...");
+      // console.log("Running SEO analysis...");
       const results = SEOAnalyzer.analyze();
+      // console.log("results", results);
       // disable button if data is incomplete
       let btnSubmit = document.querySelector(".form-actions>button");
-      console.log(btnSubmit);
+      // console.log(btnSubmit);
       btnSubmit.setAttribute("disabled", true);
 
       this.displayResults(results);
@@ -1473,7 +1495,9 @@
           }
         });
       }, 0);
-      console.log("results", results);
+      // 
+      // 
+      // console.log("results", results);
     }
 
     static generateSection(type, data, title, config) {
@@ -1511,7 +1535,9 @@
       const observer = new MutationObserver(
         Utils.debounce(() => {
           // Re-run analysis when DOM changes
-          console.log("DOM changed, re-running analysis...");
+          // console.log("DOM changed, re-running analysis...");
+          // Sync image analyzer with current files before running analysis
+          ImageAnalyzer.syncWithCurrentFiles();
           SEOPanel.runAnalysis();
         }, 200)
       );
@@ -1539,6 +1565,8 @@
           if (typeof callback === "function") {
             callback(name, value, event.target);
           } else {
+            // Sync image analyzer with current files before running analysis
+            ImageAnalyzer.syncWithCurrentFiles();
             SEOPanel.runAnalysis();
             // console.log(`Input changed: [${name}] = ${value}`);
           }
