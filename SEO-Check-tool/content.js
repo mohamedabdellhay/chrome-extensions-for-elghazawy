@@ -917,7 +917,6 @@
       // Check if all images are valid
       const allValid = this.allImages.every((image) => image.valid === true);
 
-
       return {
         valid: allValid,
         images: this.allImages,
@@ -938,10 +937,11 @@
       const input = event.target;
       const files = input.files;
       const title = SEOAnalyzer.analyzeTitle().text.trim();
-          
-      
+
       // Remove only images from 'main' source
-      ImageAnalyzer.allImages = ImageAnalyzer.allImages.filter(img => img.source !== "main");
+      ImageAnalyzer.allImages = ImageAnalyzer.allImages.filter(
+        (img) => img.source !== "main"
+      );
 
       // Analyze all current files
       if (files.length > 0) {
@@ -962,7 +962,9 @@
       const title = SEOAnalyzer.analyzeTitle().text.trim();
 
       // Remove only images from 'other' source
-      ImageAnalyzer.allImages = ImageAnalyzer.allImages.filter(img => img.source !== "other");
+      ImageAnalyzer.allImages = ImageAnalyzer.allImages.filter(
+        (img) => img.source !== "other"
+      );
 
       // Analyze all current files
       if (files.length > 0) {
@@ -1111,14 +1113,14 @@
       // console.log("Calculating Jaccard similarity...");
       // console.log("String 1:", str1);
       // console.log("String 2:", str2);
-      
+
       // Handle null/undefined values
       if (!str1 || !str2) {
         return "0.00";
       }
-      
+
       const clean = (str) => {
-        if (typeof str !== 'string') {
+        if (typeof str !== "string") {
           return [];
         }
         return str
@@ -1135,12 +1137,12 @@
       // Remove empty strings from sets
       set1.delete("");
       set2.delete("");
-      
+
       // Handle case where both sets are empty
       if (set1.size === 0 && set2.size === 0) {
         return "0.00";
       }
-      
+
       const intersection = new Set([...set1].filter((x) => set2.has(x)));
       const union = new Set([...set1, ...set2]);
 
@@ -1255,7 +1257,6 @@
       </div>
       <div class="seo-content">
         <div id="seo-results"></div>
-        <button id="refresh-seo" class="refresh-btn" style="font-size:18px">🔄 Refresh Analysis</button>
       </div>
     `;
       document.body.appendChild(panel);
@@ -1263,13 +1264,12 @@
 
     static bindEvents() {
       const toggleBtn = Utils.getElement("#seo-toggle");
-      const refreshBtn = Utils.getElement("#refresh-seo");
       const themeToggle = Utils.getElement("#theme-toggle");
 
       if (toggleBtn)
         toggleBtn.addEventListener("click", this.togglePanel.bind(this));
-      if (refreshBtn)
-        refreshBtn.addEventListener(
+      if (themeToggle)
+        themeToggle.addEventListener(
           "click",
           Utils.debounce(this.runAnalysis.bind(this), 200)
         );
@@ -1388,67 +1388,86 @@
             detail: (r) => "",
           }
         )}
-        ${this.generateSection(
-          "images",
-          results.images,
-          "🖼️ Image Analysis",
-          {
-            status: (r) => (r.valid ? "✅" : "❌"),
-            main: (r) =>
-              `${r.valid ? "All images are valid" : "Some images have issues"}`,
-            detail: (r) => {
-              // Show image previews if any images are uploaded
-              let previewHtml = "";
-              if (r.images && r.images.length > 0) {
-                previewHtml += `<div class="seo-image-viewer">`;
-                r.images.forEach(img => {
-                  if (["webp", "jpeg", "jpg", "png", "gif", "bmp"].includes(img.format)) {
-                    previewHtml += `
-                      <div class="seo-image-card${img.valid ? ' seo-image-valid' : ' seo-image-invalid'}">
+        ${this.generateSection("images", results.images, "🖼️ Image Analysis", {
+          status: (r) => (r.valid ? "✅" : "❌"),
+          main: (r) =>
+            `${r.valid ? "All images are valid" : "Some images have issues"}`,
+          detail: (r) => {
+            // Show image previews if any images are uploaded
+            let previewHtml = "";
+            if (r.images && r.images.length > 0) {
+              previewHtml += `<div class="seo-image-viewer">`;
+              r.images.forEach((img) => {
+                if (
+                  ["webp", "jpeg", "jpg", "png", "gif", "bmp"].includes(
+                    img.format
+                  )
+                ) {
+                  previewHtml += `
+                      <div class="seo-image-card${
+                        img.valid ? " seo-image-valid" : " seo-image-invalid"
+                      }">
                         <div class="seo-image-thumb-wrap">
-                          <img data-img-name="${img.name}" alt="${img.name}" class="seo-image-thumb" />
+                          <img data-img-name="${img.name}" alt="${
+                    img.name
+                  }" class="seo-image-thumb" />
                         </div>
                         <div class="seo-image-info">
-                          <div class="seo-image-name" title="${img.name}">${img.name}</div>
+                          <div class="seo-image-name" title="${img.name}">${
+                    img.name
+                  }</div>
                           <div class="seo-image-meta">
-                            <span>${img.size ? img.size.toFixed(1) : '?'} KB</span>
-                            <span>${img.dimensions ? img.dimensions.width + '×' + img.dimensions.height : ''}</span>
+                            <span>${
+                              img.size ? img.size.toFixed(1) : "?"
+                            } KB</span>
+                            <span>${
+                              img.dimensions
+                                ? img.dimensions.width +
+                                  "×" +
+                                  img.dimensions.height
+                                : ""
+                            }</span>
                           </div>
-                          ${img.issues && img.issues.length > 0 ? `<div class="seo-image-issues">${img.issues.map(issue => `<span>${issue}</span>`).join('<br/>')}</div>` : ''}
+                          ${
+                            img.issues && img.issues.length > 0
+                              ? `<div class="seo-image-issues">${img.issues
+                                  .map((issue) => `<span>${issue}</span>`)
+                                  .join("<br/>")}</div>`
+                              : ""
+                          }
                         </div>
                       </div>
                     `;
-                  }
-                });
-                previewHtml += `</div>`;
-              }
-              // Only show images with issues and their issues
-          //     let issuesHtml = "";
-          //     if (!r.valid && r.images && r.images.length > 0) {
-          //       const imagesWithIssues = r.images.filter(
-          //         (img) => img.issues && img.issues.length > 0
-          //       );
-          //       if (imagesWithIssues.length > 0) {
-          //         issuesHtml = `
-          // <ul style="padding-left:18px;">
-          //   ${imagesWithIssues
-          //     .map(
-          //       (img) =>
-          //         `<li style="font-size: 14px; text-align: left"><strong>${
-          //           img.name
-          //         }:</strong> ${img.issues.join(", ")}</li>`
-          //     )
-          //     .join("")}
-          // </ul>
-          //         `;
-          //       }
-          //     }
-              // return previewHtml + issuesHtml;
-              return previewHtml;
-            },
-            issues: () => "",
-          }
-        )}
+                }
+              });
+              previewHtml += `</div>`;
+            }
+            // Only show images with issues and their issues
+            //     let issuesHtml = "";
+            //     if (!r.valid && r.images && r.images.length > 0) {
+            //       const imagesWithIssues = r.images.filter(
+            //         (img) => img.issues && img.issues.length > 0
+            //       );
+            //       if (imagesWithIssues.length > 0) {
+            //         issuesHtml = `
+            // <ul style="padding-left:18px;">
+            //   ${imagesWithIssues
+            //     .map(
+            //       (img) =>
+            //         `<li style="font-size: 14px; text-align: left"><strong>${
+            //           img.name
+            //         }:</strong> ${img.issues.join(", ")}</li>`
+            //     )
+            //     .join("")}
+            // </ul>
+            //         `;
+            //       }
+            //     }
+            // return previewHtml + issuesHtml;
+            return previewHtml;
+          },
+          issues: () => "",
+        })}
         <div class="seo-section">
           <h4>📋 Product Data</h4>
           <div class="seo-item ${results.modal.valid ? "good" : "warning"}">
@@ -1476,27 +1495,29 @@
             CONFIG.DOM_SELECTORS.otherImagesInput
           );
           let files = [];
-          if (mainInput && mainInput.files) files = files.concat(Array.from(mainInput.files));
-          if (otherInput && otherInput.files) files = files.concat(Array.from(otherInput.files));
-          return files.find(f => f.name === name);
+          if (mainInput && mainInput.files)
+            files = files.concat(Array.from(mainInput.files));
+          if (otherInput && otherInput.files)
+            files = files.concat(Array.from(otherInput.files));
+          return files.find((f) => f.name === name);
         }
         // For each image tag with data-img-name, set src from file
-        document.querySelectorAll('img[data-img-name]').forEach(imgEl => {
-          const name = imgEl.getAttribute('data-img-name');
+        document.querySelectorAll("img[data-img-name]").forEach((imgEl) => {
+          const name = imgEl.getAttribute("data-img-name");
           const file = findFileByName(name);
           if (file) {
             const reader = new FileReader();
-            reader.onload = e => {
+            reader.onload = (e) => {
               imgEl.src = e.target.result;
             };
             reader.readAsDataURL(file);
           } else {
-            imgEl.style.display = 'none';
+            imgEl.style.display = "none";
           }
         });
       }, 0);
-      // 
-      // 
+      //
+      //
       // console.log("results", results);
     }
 
