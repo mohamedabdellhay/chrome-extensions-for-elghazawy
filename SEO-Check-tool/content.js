@@ -1192,39 +1192,68 @@
     }
   }
   // product keywords
+
   class ProductKeywords {
     static init() {
       const keywordsInput = Utils.getElement(
         CONFIG.DOM_SELECTORS.keywordsInput
       );
-      // console.log(keywordsInput);
-      if (!keywordsInput)
+      if (!keywordsInput) {
         return { valid: false, message: "No keywords input found" };
+      }
 
-      const keywords = Utils.normalizeText(keywordsInput.value);
-      const titleData = SEOAnalyzer.analyzeTitle().text.trim().split(" ");
-      // console.log("Product Title:", titleData);
-      const keywordsData = keywords.replace(/,/, " ").split(" ");
-      // console.log("Keywords Data:", keywordsData);
-      let founded = 0;
+      // Normalize and clean the keywords (handle Arabic commas and normal commas)
+      let keywords = Utils.normalizeText(keywordsInput.value).trim();
+      if (!keywords) {
+        return { valid: false, message: "Please enter product keywords" };
+      }
 
-      titleData.forEach((word) => {
-        if (keywordsData.includes(word)) {
-          founded++;
-        }
-      });
-      // console.log("Keywords founded in title:", founded);
+      // Get and clean title words (handle Arabic comma)
+      const titleAnalysis = SEOAnalyzer.analyzeTitle();
+      if (!titleAnalysis || !titleAnalysis.text) {
+        return { valid: false, message: "Could not analyze product title" };
+      }
 
-      const isValid = keywords.length > 0 && founded > 0;
+      // Normalize Arabic characters and split
+      const normalizeArabic = (str) => {
+        return str
+          .replace(/[،,]/g, " ") // Replace both Arabic and normal commas
+          .replace(/\s+/g, " ") // Replace multiple spaces with single space
+          .trim();
+      };
+
+      const titleText = normalizeArabic(titleAnalysis.text);
+      const titleWords = titleText.split(/\s+/);
+
+      // Process keywords
+      const keywordList = normalizeArabic(keywords)
+        .split(/\s+/)
+        .filter((word) => word.length > 0);
+
+      // Count matches with some flexibility for Arabic variations
+      const matches = keywordList.filter((keyword) => {
+        const normalizedKeyword = keyword
+          .replace(/[هة]/g, "[هة]") // Handle ه/ة variations
+          .replace(/[اأإآ]/g, "[اأإآ]"); // Handle Alef variations
+
+        const regex = new RegExp(`^${normalizedKeyword}$`, "i");
+        return titleWords.some((titleWord) => regex.test(titleWord));
+      }).length;
+
+      const isValid = matches > 0;
 
       return {
         valid: isValid,
         message: isValid
-          ? "Product Keywords are filled"
-          : "Please enter product keywords",
+          ? `Found ${matches} keyword matches in title (out of ${keywordList.length} keywords)`
+          : "No keywords match the product title",
+        matches: matches,
+        keywordCount: keywordList.length,
+        matchedPercentage: Math.round((matches / keywordList.length) * 100),
       };
     }
   }
+
   // SEO Panel
   class SEOPanel {
     static init() {
